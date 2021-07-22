@@ -28,7 +28,7 @@ yres=2048
 locs = np.zeros(3)  #initialize np array that holds locations
 
 # we read the csv file and initialize a numpy array that will hold the coordinates of the particle centers
-with open('testcsv.csv', mode='r') as csv_file:
+with open('tfrGel10212018A_shearRun10292018f_locations_hv01342_sed_trackPy_lsqRefine.csv', mode='r') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=' ')
     row_count = sum(1 for row in csv_reader)
     print(row_count)
@@ -39,7 +39,7 @@ with open('testcsv.csv', mode='r') as csv_file:
 
 
 # we read the input csv file and fill in the coordinates into an xarray
-with open('testcsv.csv', mode='r') as csv_file:
+with open('tfrGel10212018A_shearRun10292018f_locations_hv01342_sed_trackPy_lsqRefine.csv', mode='r') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=' ')
     line_count = 0
     for row in csv_reader:
@@ -52,18 +52,26 @@ with open('testcsv.csv', mode='r') as csv_file:
                 if i==0:
                     indexes[line_count-1]=int(row[i])  #populate index array
                 if i==1:
-                    locs[line_count-1,2]=float(row[i]) #z coord
-                    zloc=math.floor(float(row[i])*.115/.15)-5
+                    locs[line_count-1,2]=float(row[i]) #z coord  in pixels
+                    zloc=math.floor(float(row[i]))-7 #in z slices
                     if zloc <0:
                         zloc=0
                     chunk_locs[line_count-1,2]=int(zloc)
+                    locs[line_count-1,2]=locs[line_count-1,2] -int(zloc)
                 if i==2:
                     locs[line_count-1,1]=float(row[i]) #y coord
-                    chunk_locs[line_count-1,1]=int(math.floor(float(row[i]))-6)
+                    yloc=math.floor(float(row[i]))-7
+                    if yloc<0:
+                        yloc=0
+                    chunk_locs[line_count-1,1]=int(yloc)
+                    locs[line_count-1,1]=locs[line_count-1,1]-int(yloc)
                 else:
                     locs[line_count-1,0]=float(row[i]) #x coord
-
-                    chunk_locs[line_count-1,0]=int(math.floor(float(row[i]))-6)
+                    xloc=math.floor(float(row[i]))-7
+                    if xloc <0:
+                        xloc=0
+                    chunk_locs[line_count-1,0]=int(xloc)
+                    locs[line_count-1,0]=locs[line_count-1,0]-int(xloc)
                 i+=1
             line_count += 1
 
