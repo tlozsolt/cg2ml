@@ -1,3 +1,8 @@
+# TODO: Write documentations for the functions below
+# TODO: Create script so that the dimensions are auto-caculated
+# TODO: Optuna to tune hyperparameters
+# TODO: Logging capability for hyperparameters, early stopping
+
 #%%
 from more_itertools import pairwise, value_chain
 import torch
@@ -20,10 +25,11 @@ class Regression3DCNN(pl.LightningModule):
         self.fc_features = fc_features
 
         self.conv_layers = self._make_conv_layers()
+        self.batchnorm_layers = nn.ModuleList([nn.BatchNorm3d(channel) for channel in conv_channels])
         self.maxpool3d = nn.MaxPool3d(kernel_size = 2, stride = 2)
         self.fc_layers = self._make_fully_connected_layers()
 
-        self.lr = 0.005
+        self.lr = 0.001
 
     def _make_conv_layers(self):
         channel_args_itr = pairwise_value_chain(self.input_channel, self.conv_channels)
@@ -36,9 +42,9 @@ class Regression3DCNN(pl.LightningModule):
         return fc_layers
 
     def forward(self, x):
-        for conv3d in self.conv_layers[:-1]:
-            x = self.maxpool3d(torch.relu(conv3d(x)))
-        x = torch.relu(self.conv_layers[-1](x))
+        for batchnorm3d, conv3d in zip(self.batchnorm_layers[:-1], self.conv_layers[:-1]):
+            x = self.maxpool3d(torch.relu(batchnorm3d(conv3d(x))))
+        x = torch.relu(self.batchnorm_layers[-1](self.conv_layers[-1](x)))
         x = torch.flatten(x, start_dim = 1)
         
         for fc in self.fc_layers[:-1]:
@@ -102,7 +108,7 @@ val_dl = torch.utils.data.DataLoader(val_data, batch_size = 256, num_workers = 4
 from pytorch_lightning import loggers as pl_loggers
 tb_logger = pl_loggers.TensorBoardLogger('logs/')
 cnn = Regression3DCNN()
-trainer = pl.Trainer(logger = tb_logger, max_epochs = 2000)
+trainer = pl.Trainer(logger = tb_logger, max_epochs = 2000, gpus = 1)
 #%%
 trainer.fit(cnn, train_dl, val_dl)
 #%%
