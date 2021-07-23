@@ -1,0 +1,48 @@
+local_dir: '/path/to/working/directory'
+
+pipeline_steps:
+  - denoising
+  - deconvolution
+  - segmentation
+  - particleLocating
+
+denoising:
+  calibration_paths:
+    # relative paths on local dir (or symbolic links from local_dir)
+    darkField: '/denoising/darkField' # folder containing darkField images specific to microscope camera
+    pxGain: '/denoising/pxGain' # pxGain
+    otf: 'denoising/otf' # optical transfer function
+    raw_tiff: 'raw_tiff'
+  metaData:
+    camera_serial: 0 # what's the serial number of the camera
+    calibration_data: DD_MM_YYY # when was the calibration data taken?
+
+deconvolution:
+  path:
+    psf: 'relative/path/to/psf.tif'
+    exec: 'path/to/executable'
+    output: 'decon' # relative path to output
+  param: # dictionary of parameters for deconvolution
+    method: 'RLTV' # richardson lucyy with total variation regularization
+    lambda: 0.000001 # regularization parameter
+    pad:
+      x: 'E2'
+      y: 'E2'
+
+segmentation:
+  path:
+    ilastik_exec: 'path/to/ilastik/ilastik.x'
+    ilastik_ilp: 'segmentation/pxClassifier.ilp' # path to trained network
+    output: 'segmentation' # relative path to output
+
+cg2ml:
+  path:
+    training: 'path/to/training/data'
+    output: 'locations' # relative path to output
+    exec: 'path/to/executable'
+
+
+
+
+
+

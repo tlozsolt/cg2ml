@@ -12,3 +12,12 @@ Pipeline steps
 
 -Zsolt Jul 23 2021
 """
+import yaml
+
+class pipeline(metaData_path):
+
+    def __init__(self):
+
+        # initialize with path to metaData file which keys of metaData for each
+        # step in the pipeline
+        self.metaData = yaml.load(metaData_path)
