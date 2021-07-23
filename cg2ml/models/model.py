@@ -1,16 +1,9 @@
-# TODO: Write documentations for the functions below
-# TODO: Create script so that the dimensions are auto-caculated
-# TODO: Optuna to tune hyperparameters
-# TODO: Logging capability for hyperparameters, early stopping
 
 #%%
-from more_itertools import pairwise, value_chain
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-
-def pairwise_value_chain(*args):
-    return pairwise(value_chain(*args))
+from .utils import pairwise_value_chain
 
 mean_squared_error = nn.MSELoss()
 
