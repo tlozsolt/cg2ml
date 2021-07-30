@@ -127,7 +127,7 @@ def get_chunk_img(n1,index,indexdata):
    #      print(cen[0:2])
    #      plt.show()
    #      f=f+1
-        #time.sleep(0.1)
+   #      #time.sleep(0.1)
    #print(output)
    return output
 
