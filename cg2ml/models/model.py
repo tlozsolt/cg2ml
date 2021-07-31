@@ -42,7 +42,7 @@ class Regression3DCNN(pl.LightningModule):
         
         for fc in self.fc_layers[:-1]:
             x = torch.relu(fc(x))
-        x = torch.tanh(self.fc_layers[-1](x))
+        x = self.fc_layers[-1](x)
         return x
     
     def training_step(self, batch, batch_idx):

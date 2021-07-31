@@ -43,3 +43,5 @@ cnn = Regression3DCNN()
 trainer = pl.Trainer(logger = tb_logger, max_epochs = 2000, gpus = 1)
 #%%
 trainer.fit(cnn, train_dl, val_dl)
+
+# %%
