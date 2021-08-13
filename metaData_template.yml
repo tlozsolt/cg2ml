@@ -1,27 +1,34 @@
 local_dir: '/path/to/working/directory'
 
 pipeline_steps:
+  - hash
   - denoising
   - deconvolution
   - segmentation
-  - particleLocating
+  - locating
 
 denoising:
-  calibration_paths:
+  path:
     # relative paths on local dir (or symbolic links from local_dir)
     darkField: '/denoising/darkField' # folder containing darkField images specific to microscope camera
     pxGain: '/denoising/pxGain' # pxGain
-    otf: 'denoising/otf' # optical transfer function
-    raw_tiff: 'raw_tiff'
+    otf: '/denoising/otf' # optical transfer function
+    raw_tiff: '/raw_tiff'
+    output: '/denoise'
+  fName:
+      out_frmt: '{base}_m{mat}_t{t:04}.tif'
+      in_frmt: 'input_file_format.tif'
   metaData:
     camera_serial: 0 # what's the serial number of the camera
     calibration_data: DD_MM_YYY # when was the calibration data taken?
 
 deconvolution:
   path:
-    psf: 'relative/path/to/psf.tif'
-    exec: 'path/to/executable'
-    output: 'decon' # relative path to output
+    psf: '/relative/path/to/psf.tif'
+    exec: '/path/to/executable'
+    output: '/decon' # relative path to output
+  fName:
+    out_frmt: '{base}_m{mat}_decon_t{t:04}.tif'
   param: # dictionary of parameters for deconvolution
     method: 'RLTV' # richardson lucyy with total variation regularization
     lambda: 0.000001 # regularization parameter
@@ -31,15 +38,47 @@ deconvolution:
 
 segmentation:
   path:
-    ilastik_exec: 'path/to/ilastik/ilastik.x'
-    ilastik_ilp: 'segmentation/pxClassifier.ilp' # path to trained network
-    output: 'segmentation' # relative path to output
+    ilastik_exec: '/path/to/ilastik/ilastik.x'
+    ilastik_ilp: '/segmentation/pxClassifier.ilp' # path to trained network
+    output: '/segmentation' # relative path to output
+  fName:
+    out_frmt: '{base}_m{mat}_t{t:03}.h5'
 
 cg2ml:
   path:
-    training: 'path/to/training/data'
-    output: 'locations' # relative path to output
-    exec: 'path/to/executable'
+    training: '/path/to/training/data'
+    output: '/locations' # relative path to output
+    exec: '/path/to/executable'
+
+locating_tp:
+  path:
+    input: '/path/to/input/stack'
+    output: '/locations' # relative path to output
+  param: # all the parameters that need to be fed to trackpyy locating
+    disc_size: 0.3
+
+slurm_submission:
+  path:
+    input: ''
+    output: '/path/to/sbatch/output'
+    param: #SLURM keywords
+      - n: 4
+      - N: 1
+      - queue : 'serial_requeu'
+      - t : 0-16:00
+
+visualize:
+  path:
+    input:
+       locations: '/path/to/locations/xyz'
+       image: '/path/to/image/to/compare/locations'
+    output: '/path/to/output/images'
+
+
+
+
+
+
 
 
 
