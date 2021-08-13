@@ -95,8 +95,10 @@ class imageHash():
         ### PAUSE ###
         # zsolt Jul 30 2021
         hashTable = {}
-        hashInverse = {}
         # Do we need a hashInverse table? Yes because the job flow requires numbers to be passed to the
+        # cg2ml refactor: I am going to decide that we do not need an inverse hash table as hash_df can be
+        """
+        # queried using pandas.
         # job queing. We could in principle make one hash with
         # key:values like '9,3,16':(9,3,16)
         # as opposed to:
@@ -107,6 +109,7 @@ class imageHash():
         # that will most probably work as the default
         # on any level of the job control whether in python, bash or whatever the SLURM is written in.
         # This type conversion is also handled in this class by using the method queryHash
+        """
         keyCount = 0
         for t in range(timeSteps):
             for z in range(len(zCrop)):
@@ -115,7 +118,7 @@ class imageHash():
                         hashTable[str(keyCount)] = dict([('xyztCropTuples', [xCrop[x], xCrop[y], zCrop[z], t])])
                         hashTable[str(keyCount)]['material'] = material[z]
                         hashTable[str(keyCount)]['index'] = (x, y, z, t)
-                        hashInverse[str(x) + ',' + str(y) + ',' + str(z) + ',' + str(t)] = keyCount
+                        #hashInverse[str(x) + ',' + str(y) + ',' + str(z) + ',' + str(t)] = keyCount
                         # are the keys unique? Yes but commas are required to avoid '1110' <- 1,11,0 pr 11,1,0 or 1,1,10
                         keyCount += 1
         """
