@@ -6,51 +6,81 @@ import pandas as pd
 import os, glob
 import math
 
-class imageHash():
+class hash():
     """
     A python class to create a spatial hash used for chunking an xyzt image data
-    into a hearchable table of hash parameters.
+    into a searchable table of hash parameters.
     This class does not open or load any images, and all image information required
     for creating the hash (size of image, size of hash, etc) is read from a
     parameter file.
+
+    Attributes:
+        - self.metaData : parsed yaml file
+        - self.metaDataPath: the path to the metaData yaml file when the instance was created
+        - self.hashDimensions: dictionary of hash dimensions
+        - self.hash : a hash table of positive integers mapping into:
+                      coordinate time ,z,y,x and crop parameters for the hash Table
+        - self.hash_df: the same hash table as self.hash, but as a pandas array.
+
+    Methods:
+        - fetchMeta : returns the metaData information for the queried keyword
+        - fetchPaths: return a dictionary (or pandas array) with keywords for each
+                      pipeline step and the associated paths to the images.
+
+    **************
+    Useage:
+    - get the hash indices for all time point t=17
+      >> inst.hash_df []
 
     -zsolt Jul 30, 2021
     """
     def __init__(self, metaDataPath):
 
         # load yaml metaData file
+        self.metaDataPath = metaDataPath
         with open(metaDataPath, 'r') as s:
             self.metaData = yaml.load(s, Loader=yaml.SafeLoader)
 
         # dimensions of the image
-        imgParam = self.metaData['imageParam']
-        timeSteps = imgParam['timeSteps']
-        zDim, yDim, xDim = imgParam['zDim'], imgParam['yDim'], imgParam['xDim']
+        imgParam = self.metaData['image']
+        dim = imgParam['dim']
+        timeSteps, zDim, yDim, xDim = dim['t'], dim['z'], dim['y'], dim['x']
 
-        # hash dim
+        # check that xy dimensions are equal and constant for sed and gel.
+        # raise error otherwise
         hash_param = self.metaData['hash']
-        hashDim_xy = hash_param['xyDim']
-        hashOverlap_xy = hash_param['overlap']['xy']
+        dim = set()
+        overlap = set()
+        for mat in ['sed', 'gel']:
+            for coord in ['x','y']:
+                dim.add(hash_param[mat]['dim'][coord])
+                overlap.add(hash_param[mat]['minOverlap'][coord])
+
+        # are the sets of len 1? They should be
+        if len(dim) == 1: hashDim_xy = dim.pop()
+        else: raise ValueError("Hash dimensions in x and y must be equal for both sed and gel")
+
+        if len(overlap) == 1: hashOverlap_xy = overlap.pop()
+        else: raise ValueError("Hash overlap in x and y must be equal for both sed and gel")
 
         # compute the number of hashes in x and y
-        # image could not be square but hashes will all be square
         # [ ] check that this works, july 30 2021
-        Nx = math.ceil((xDim[1]-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
-        Ny = math.ceil((yDim[1]-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
+        Nx = math.ceil((xDim-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
+        Ny = math.ceil((yDim-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
 
         # now deal with the z coordinate
         # z chunks are computed separately for gel and sediment and based on min overlap and z dimension in gel and sed portions
         gelSedLoc = imgParam['gelSedimentLocation']
-        sed_overlap_gel = hash_param['overlap']['sed_gel']
-        gel_overlap_sed = hash_param['overlap']['gel_sed']
+        sed_overlap_gel = hash_param['sed']['interface_pxOverlap']
+        gel_overlap_sed = hash_param['gel']['interface_pxOverlap']
 
         # Get the z bounds for gel and sediment taking into account the min overlap of gel into sed and vice-versa
         gelZ_dim = (0, gelSedLoc + gel_overlap_sed)
-        sedZ_dim = (gelSedLoc - sed_overlap_gel, zDim[1])
+        sedZ_dim = (gelSedLoc - sed_overlap_gel, zDim)
 
         # how big are the chunks in z for sed and gel?
-        hashDim_z_gel = hash_param['dim']['gel']['z']
-        hashDim_z_sed = hash_param['dim']['sed']['z']
+        hashDim_z_gel = hash_param['gel']['dim']['z']
+        hashDim_z_sed = hash_param['sed']['dim']['z']
 
         # compute the number of chunks
         Nz_sed: Union[float, int] = math.ceil((sedZ_dim[1] - sedZ_dim[0] - sed_overlap_gel )/(hashDim_z_sed - sed_overlap_gel))
@@ -71,12 +101,12 @@ class imageHash():
         def hashCenters(blockSize, left, right, N):
             """Returns a list of N evenly spaced points separated by """
             if blockSize*N < (right-left): raise KeyError("hash dimension is too small")
-            return np.linspace(np.floor(left + blockSize/2), np.ceil(right - blockSize/2),num=nChunks)
+            return np.linspace(np.floor(left + blockSize/2), np.ceil(right - blockSize/2),num=N)
 
         centerPts = {'x': hashCenters(hashDim_xy,0,xDim,Nx),
                      'y': hashCenters(hashDim_xy,0,yDim,Ny),
                      'z_sed': hashCenters(hashDim_z_sed, sedZ_dim[0], sedZ_dim[1], Nz_sed),
-                     'z_gel': hashCenters(hashDim_z_gel, gelZ_dim[0], gelZ_dim[1])}
+                     'z_gel': hashCenters(hashDim_z_gel, gelZ_dim[0], gelZ_dim[1], Nz_gel)}
 
         xCrop = [(int(c-hashDim_xy/2),int(c + hashDim_xy/2)) for c in centerPts['x']]
 
@@ -92,13 +122,11 @@ class imageHash():
                           int(c + hashDim_z_sed/2)))
             material.append('sed')
 
-        ### PAUSE ###
-        # zsolt Jul 30 2021
         hashTable = {}
         # Do we need a hashInverse table? Yes because the job flow requires numbers to be passed to the
         # cg2ml refactor: I am going to decide that we do not need an inverse hash table as hash_df can be
-        """
         # queried using pandas.
+        """
         # job queing. We could in principle make one hash with
         # key:values like '9,3,16':(9,3,16)
         # as opposed to:
@@ -118,8 +146,6 @@ class imageHash():
                         hashTable[str(keyCount)] = dict([('xyztCropTuples', [xCrop[x], xCrop[y], zCrop[z], t])])
                         hashTable[str(keyCount)]['material'] = material[z]
                         hashTable[str(keyCount)]['index'] = (x, y, z, t)
-                        #hashInverse[str(x) + ',' + str(y) + ',' + str(z) + ',' + str(t)] = keyCount
-                        # are the keys unique? Yes but commas are required to avoid '1110' <- 1,11,0 pr 11,1,0 or 1,1,10
                         keyCount += 1
         """
     I have to check that 'the bounds are working the way I think they are. \
@@ -142,7 +168,7 @@ class imageHash():
         # This is however a better more elegant data structure for query in the hash table
         # what the hashValues for first and last time points?
         # >>> hash_df[(hash_df['t'] == 0) |  (hash_df['t']==89)].index
-        hash_df = pandas.DataFrame(hashTable).T
+        hash_df = pd.DataFrame(hashTable).T
         hash_df['x'] = hash_df['index'].apply(lambda x: x[0])
         hash_df['y'] = hash_df['index'].apply(lambda x: x[1])
         hash_df['z'] = hash_df['index'].apply(lambda x: x[2])
@@ -155,6 +181,11 @@ class imageHash():
 
         self.hash_df = hash_df
         self.hash = hashTable
-        self.invHash = hashInverse
-        self.metaDataPath = metaDataPath
 
+def test(metaPath='../metaData_template.yml'):
+    return hash(metaPath)
+
+if __name__ == '__main__':
+    inst = test('../metaData_template.yml')
+#%%
+    inst = test('../metaData_template.yml')

@@ -1,13 +1,35 @@
-local_dir: '/path/to/working/directory'
+directories:
+  local: '/path/to/local/working/directory'
+  PROJECT: 'path/to/dir/with/long/term/storage'
+  SCRATCH: '/path/to/dir/without/long/term/storage'
 
 pipeline_steps:
   - hash
-  - denoising
-  - deconvolution
-  - segmentation
-  - locating
+  - denoise
+  - deconvolve
+  - segment
+  - locate
+  - track
+
+image:
+  dim: {'x':2048, 'y': 2048, 'z': 560, 't': 1}
+  px2Micron: {'x': 0.115, 'y': 0.115, 'z': 0.15} # list of multiplicative factors, this should be changed to just report raw and handle any upscaling when/if that happens during the pipleine
+  gelSedimentLocation: 210 # location in z of gel/sediment transition in imaging stack. If tilted, report height to give thickest gel
+
+hash:
+  crop: True
+  gel:
+    dim: {'x':450, 'y':450, 'z':200} # XYZ dimensions of the hash
+    minOverlap: {'x': 50, 'y': 50, 'z': 50} # minimum overlap in XYZ
+    interface_pxOverlap: 50 # how much overlap in pixels should gel chunks have with sediment? \
+    # This defines the upper bound for hashing gel chunks
+  sed:
+    dim: {'x':450, 'y':450, 'z':200} # XYZ dimensions of the hash
+    minOverlap: {'x': 50, 'y': 50, 'z': 50} # minimum overlap in XYZ
+    interface_pxOverlap: 70 # how much overlap in pixels should sed chunks have with gel? \
 
 denoising:
+  crop: False
   path:
     # relative paths on local dir (or symbolic links from local_dir)
     darkField: '/denoising/darkField' # folder containing darkField images specific to microscope camera
@@ -23,6 +45,7 @@ denoising:
     calibration_data: DD_MM_YYY # when was the calibration data taken?
 
 deconvolution:
+  crop: True # this will pad and crop
   path:
     psf: '/relative/path/to/psf.tif'
     exec: '/path/to/executable'
