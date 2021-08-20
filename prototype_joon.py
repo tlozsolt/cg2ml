@@ -17,29 +17,24 @@ out
 #%%
 labels['chunk_origin'][0].to_numpy()[::-1]
 # %%
+%reload_ext autoreload
+%autoreload 2
 from cg2ml.data.preprocessing import DatasetFactory
+from cg2ml.training import make_dataloaders, make_trainer
+from cg2ml.models.model import Regression3DCNN
 
 factory = DatasetFactory(volume_data_path = './finalim.h5', label_path = './saved_chunk_xarray.nc')
-# %%
-len(factory)
-# %%
-factory[0][1]
+
 #%%
 dataset = factory.to_TensorDataset()
 #%%
-import torch
-N_data = len(dataset)
-N_val = int(0.1*N_data)
-N_train = N_data - N_val
-train_data, val_data = torch.utils.data.random_split(dataset, [N_train, N_val])
-train_dl = torch.utils.data.DataLoader(train_data, batch_size = 256, num_workers = 4)
-val_dl = torch.utils.data.DataLoader(val_data, batch_size = 256, num_workers = 4)
+train_dl, val_dl = make_dataloaders(dataset, split_ratios = (9, 1), batch_size = 256, num_workers = 4)
+nn_model = Regression3DCNN()
+trainer = make_trainer(savedir = './results', max_epochs = 2000, gpus = 1)
+
 #%%
-from cg2ml.models.model import Regression3DCNN
-import pytorch_lightning as pl
-from pytorch_lightning import loggers as pl_loggers
-tb_logger = pl_loggers.TensorBoardLogger('logs/')
-cnn = Regression3DCNN()
-trainer = pl.Trainer(logger = tb_logger, max_epochs = 2000, gpus = 1)
-#%%
-trainer.fit(cnn, train_dl, val_dl)
+trainer.fit(nn_model, train_dl, val_dl)
+
+
+
+# %%
