@@ -17,6 +17,7 @@ out
 #%%
 labels['chunk_origin'][0].to_numpy()[::-1]
 # %%
+### Create dataset from the input data files & train the neural network ###
 %reload_ext autoreload
 %autoreload 2
 from cg2ml.data.preprocessing import DatasetFactory
@@ -36,5 +37,68 @@ trainer = make_trainer(savedir = './results', max_epochs = 2000, gpus = 1)
 trainer.fit(nn_model, train_dl, val_dl)
 
 
+# %%
+### Inspect the contents of the csv file ###
+import pandas as pd
+csv = pd.read_csv('../Data/locations/tfrGel10212018A_shearRun10292018f_locations_hv01342_sed_trackPy.csv', delimiter = ' ')
+csv.head()
+# %%
+csv.shape
+# %%
+factory[0][0][(1, 1, 1)]
+# %%
+import numpy as np
+def get_center_intensity(volume, normalized_center_coords):
+    center_coords = np.floor_divide(volume.shape, 2) + np.array(normalized_center_coords)
+    return volume[tuple(np.int_(center_coords))]
+# %%
+get_center_intensity(*factory[0])
+# %%
+from tqdm import tqdm
+center_intensities = np.array([get_center_intensity(*chunk) for chunk in tqdm(factory)])
+# %%
+import matplotlib.pyplot as plt
 
+plt.hist(center_intensities)
+# %%
+import torch
+def normalized_radius(position, center, scale):
+    return torch.linalg.norm((position-center)/scale, dim = -1)
+
+# Equivalent to the definition in paper but does not use explicit conditionals
+# This should make it play better with autograd
+def disk(r, d):
+    exponent = torch.relu((r-d)/(1-d))
+    return torch.exp(-exponent**2)
+
+def get_coordinates(volume_shape):
+    return torch.meshgrid(*[torch.arange(n)-0.5*(n+1) for n in volume_shape])
+
+def ideal_image(volume_shape, center, scale, disk_size):
+    positions = get_coordinates(volume_shape)
+    radii = normalized_radius(torch.stack(positions, dim = -1), center, scale)
+    return disk(radii, disk_size)
+#%%
+dataset[0][0].size()
+# %%
+scale = torch.tensor([2.0, 3.4, 3.4])
+out = ideal_image((15, 15, 15), dataset[0][1], scale, 0.2)
+# %%
+out.size()
+# %%
+import plotly.graph_objects as go
+#values = out.numpy()
+values = dataset[1][0].numpy()
+Z, Y, X = get_coordinates((15, 15, 15))
+fig = go.Figure(data=go.Volume(
+    x=X.numpy().flatten(),
+    y=Y.numpy().flatten(),
+    z=Z.numpy().flatten(),
+    value=values.flatten(),
+    isomin=0.1,
+    isomax=0.8,
+    opacity=0.1, # needs to be small to see through all surfaces
+    surface_count=7, # needs to be a large number for good volume rendering
+    ))
+fig.show()
 # %%
