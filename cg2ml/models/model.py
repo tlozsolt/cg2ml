@@ -9,9 +9,9 @@ mean_squared_error = nn.MSELoss()
 
 class Regression3DCNN(pl.LightningModule):
 
-    def __init__(self, conv_channels = [16, 32, 64], fc_features = [1728, 500, 100, 50, 3]):
+    def __init__(self, conv_channels = [16, 32, 64], fc_features = [1728, 500, 100, 50, 3], learning_rate = 0.001):
         super().__init__()
-
+        self.save_hyperparameters(logger = False)
         self.input_channel = 1
         self.conv_channels = conv_channels
         self.output_feature = 3
@@ -22,7 +22,7 @@ class Regression3DCNN(pl.LightningModule):
         self.maxpool3d = nn.MaxPool3d(kernel_size = 2, stride = 2)
         self.fc_layers = self._make_fully_connected_layers()
 
-        self.lr = 0.001
+        self.lr = learning_rate
 
     def _make_conv_layers(self):
         channel_args_itr = pairwise_value_chain(self.input_channel, self.conv_channels)
@@ -56,6 +56,7 @@ class Regression3DCNN(pl.LightningModule):
         x, y = batch
         y_hat = self(x)
         val_loss = mean_squared_error(y, y_hat)
+        print(val_loss)
         self.log('validation loss', val_loss, on_epoch = True, logger = True)
         return val_loss
 
