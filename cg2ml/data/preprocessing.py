@@ -29,7 +29,7 @@ class DatasetFactory():
 
     def __getitem__(self, index):
         chunk = self.get_chunk(index)
-        center = self.get_center_coord(index) - 0.5*self.chunk_size
+        center = self.get_center_coord(index) - 0.5*(self.chunk_size+1) # for chunk size 5, changes index from 0, 1, 2, 3, 4 -> -2, -1, 0, 1, 2
         # The concrete chunk size of 15 is baked into the script that generates the xarrays as well
         # This will also need to be addressed later
         return chunk, center
