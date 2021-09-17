@@ -1,15 +1,63 @@
+&global_fName 'tfr10292018_shearRun_f_{suffix}'
 directories:
-  local: '/path/to/local/working/directory'
-  PROJECT: 'path/to/dir/with/long/term/storage'
+  LOCAL: '/path/to/local/working/directory'
+  PROJECT: '/path/to/dir/with/long/term/storage'
   SCRATCH: '/path/to/dir/without/long/term/storage'
+  CALIBRATION: '/path/to/dir/with/calibration/and/ilastik'
 
-pipeline_steps:
-  - hash
-  - denoise
-  - deconvolve
-  - segment
-  - locate
-  - track
+
+pipeline:
+  - hash:
+      stem:
+        in: '{PROJECT}/raw_tiff'
+        out: '{SCRATCH}/hash'
+      fName:
+        in: '/tfrGel10212018A_shearRun10292018f20181030_22333 PM_'
+        out: '/hv{hv:03}_{mat}_hash.tif'
+  - denoise:
+      stem:
+        in: '{SCRATCH}/hash'
+        out: '{SCRATCH}/denoise'
+        calibration: '{CALIBRATION}/denoise/camera_sn0000' # directory containing offset  and gain pixel maps
+      fName:
+        in: '/hv{hv:03}_{mat}_hash.tif'
+        out: '/hv{hv:03}_{mat}_denoise.tif'
+  - deconvolve:
+      stem:
+        in: '{SCRATCH}/denoise'
+        out: '{SCRATCH}/decon'
+        psf: '{CALIBRATION}/decon/psf'
+        exec: '/path/to/deconLab2'
+      fName:
+        in: '/hv{hv:03}_mat_denoise.tif'
+        out: '/hv{hv:03}_mat_decon.tif'
+        psf: '/regexp_for_psf_slices.tif'
+        exec: '/probably_something_like_deconLab2.jar'
+  - segment:
+      stem:
+        in: '{SCRATCH}/decon'
+        out: '{SCRATCH}/decon'
+        model: '{CALIBRATION}/ilastik'
+        exec: '/path/to/ilastik/installation'
+      fName:
+        in: '/hv{hv:03}_m{mat}_decon.tif'
+        out: '/hv{hv:03}_m{mat}_pxProb.hdf'
+        model: '/sedGel_split_6Channel_{flag}.ilp' #fileName of trained classifer model
+        exec: '/something_like_ilastik.x'
+  - locate:
+      stem:
+        in: '{SCRATCH}/decon'
+        out: '{PROJECT}/locations'
+      fName:
+        in: '/hv{hv:03}_m{mat}_{flag}.tif' # flag is either 'decon' or 'pxProb'
+        out: '/hv{hv:03}_m{mat}_{flag}.csv' # flag is either lsqRefine or centroid
+  - track:
+      stem:
+        in: '{PROJECT}/locations'
+        out: '{LOCAL}/track'
+      fName:
+        in: '/*m{mat}_{flag}*csv' # regexp to select all gel or sediment files to track
+        out: *global_fName # not sure exactly what this does or if I can pass some formatting string or append to an alias
 
 image:
   dim: {'x':2048, 'y': 2048, 'z': 560, 't': 1}
@@ -28,7 +76,7 @@ hash:
     minOverlap: {'x': 50, 'y': 50, 'z': 50} # minimum overlap in XYZ
     interface_pxOverlap: 70 # how much overlap in pixels should sed chunks have with gel? \
 
-denoising:
+denoise:
   crop: False
   path:
     # relative paths on local dir (or symbolic links from local_dir)
@@ -43,6 +91,18 @@ denoising:
   metaData:
     camera_serial: 0 # what's the serial number of the camera
     calibration_data: DD_MM_YYY # when was the calibration data taken?
+    ACSN_param:
+        NA: 1.3 # numerical aperature
+        lambda: 0.560 # wavelength in microns
+        pixelSize: 0.115 # pixel size in microns
+        video: 'auto' # 'yes | no | default, flag for video input in ACsN
+        weight: 0.2 # weight parameter, only tunable parameter in the code
+        hotspot: True # boolean, whether to remove hotspots
+        mode: 'Fast' # 'Fast' | 'Normal', not sure what this input changes, but fast is default
+    input_calibration:
+      gain: /path/to/px/gain/pickle/file
+      offset: /path/to/offset/pickle/file
+      cmap: /path/to/colormap/pickle/file
 
 deconvolution:
   crop: True # this will pad and crop

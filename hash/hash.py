@@ -182,6 +182,63 @@ class hash():
         self.hash_df = hash_df
         self.hash = hashTable
 
+    @staticmethod
+    def getfPath(step, flag, metaData):
+        """
+        I want this function to take in a step, say 'decon' and then return a function
+        that can be applied across hash df to get input and output files.
+
+        inst.hash_df.loc[[273,458]].apply(getfPath('decon','out')) would return a list
+        of output paths for hashValue 273 and 458
+
+        and this is basiclly accomplished by parsing the metaData file and then passing
+        a dictionary of the entries in the hash_df (ie material, hv, etc) to a format string
+
+        For all steps in pipeline, a string giving the full path to the file
+        >> inst.hash_df.loc[273]['decon_out']
+            should return the path to decon output file
+            hashvalue 273 in the format '{PROJECT}/decon/hv00237_decon_out.tif' or something
+            to that effect if you want the files saved to project. More generally
+            it could be STEM, and you pass the format string later.
+        and something like hash_df[inst.hash_df[t] == 45]['locations_out'] will
+        give the paths to all locations files for time 45.
+        :return:
+
+       # this function gives the basic syntax for applying a sum of three rows
+       # to a dataframe
+       def outerFunc(df_entry):
+           def inner(a,b,c): return a + b + c
+           return inner(df_entry[0],df_entry[1],df_entry[2])
+        """
+        # read yaml to get the keys
+        #n_steps = len(self.metaData['pipeline'])
+        #step_list = [self.metaData['pipeline'][n].keys for n in range(n_steps)]
+        # find the step number coresponding to input step
+        for index, val in enumerate(metaData['pipeline']):
+        #for index, val in enumerate(step_list):
+            if step == val:
+                step_dict = metaData['pipeline'][index]
+                break
+
+        # now parse the fileName
+        directories = metaData['directories']
+
+        def _exampleFunc(hv_entry):
+            # this function has to take in a row in hash_df
+            # no other parameters? I am not sure. It has scope for variables local
+            # to getfPath
+            input = step_dict['stem'][flag].format(**directories) + step_dict['fName'][flag].format(**dict(hv_entry))
+            return input
+        return _exampleFunc
+    """
+   def path_factory(step, flag):
+      if step == 'decon': test_str ='{stem}/decon'
+      if flag == 'in': test_str += '/{leaf}/{mid:03}.tif'
+      def getString(row): 
+          return test_str.format(**dict(row))
+      return getString
+   >> tmp.apply(path_factory('decon','in'),axis=1) 
+    """
 def test(metaPath='../metaData_template.yml'):
     return hash(metaPath)
 
