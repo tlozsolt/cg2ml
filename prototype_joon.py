@@ -22,7 +22,7 @@ labels['chunk_origin'][0].to_numpy()[::-1]
 %autoreload 2
 from cg2ml.data.preprocessing import DatasetFactory
 from cg2ml.training import make_dataloaders, make_trainer
-from cg2ml.models.model import Regression3DCNN
+from cg2ml.models.model import Regression3DCNN, Regression3DCNNv2
 
 factory = DatasetFactory(volume_data_path = './finalim.h5', label_path = './saved_chunk_xarray.nc')
 
@@ -30,7 +30,7 @@ factory = DatasetFactory(volume_data_path = './finalim.h5', label_path = './save
 dataset = factory.to_TensorDataset()
 #%%
 train_dl, val_dl = make_dataloaders(dataset, split_ratios = (9, 1), batch_size = 256, num_workers = 4)
-nn_model = Regression3DCNN()
+nn_model = Regression3DCNNv2(learning_rate = 0.001)
 trainer = make_trainer(savedir = './results', max_epochs = 2000, gpus = 1)
 
 #%%
@@ -44,13 +44,19 @@ csv = pd.read_csv('../Data/locations/tfrGel10212018A_shearRun10292018f_locations
 csv.head()
 # %%
 csv.shape
+#%%
+names = [item for item in csv.columns if 'std' in item]
+names
 # %%
-factory[0][0][(1, 1, 1)]
+import matplotlib.pyplot as plt
+plt.hist(csv['background']/(2**16-1), bins = 20)
 # %%
 import numpy as np
 def get_center_intensity(volume, normalized_center_coords):
     center_coords = np.floor_divide(volume.shape, 2) + np.array(normalized_center_coords)
     return volume[tuple(np.int_(center_coords))]
+# %%
+set(csv['disc_size'])
 # %%
 get_center_intensity(*factory[0])
 # %%
@@ -64,6 +70,8 @@ plt.hist(center_intensities)
 import torch
 def normalized_radius(position, center, scale):
     return torch.linalg.norm((position-center)/scale, dim = -1)
+
+
 
 # Equivalent to the definition in paper but does not use explicit conditionals
 # This should make it play better with autograd
@@ -80,6 +88,9 @@ def ideal_image(volume_shape, center, scale, disk_size):
     return disk(radii, disk_size)
 #%%
 dataset[0][0].size()
+import scipy.ndimage as ndimage
+
+labels, _ = ndimage.label(dataset[0][0].numpy())
 # %%
 scale = torch.tensor([2.0, 3.4, 3.4])
 out = ideal_image((15, 15, 15), dataset[0][1], scale, 0.2)
@@ -87,8 +98,9 @@ out = ideal_image((15, 15, 15), dataset[0][1], scale, 0.2)
 out.size()
 # %%
 import plotly.graph_objects as go
+values = labels
 #values = out.numpy()
-values = dataset[1][0].numpy()
+#values = dataset[1][0].numpy()
 Z, Y, X = get_coordinates((15, 15, 15))
 fig = go.Figure(data=go.Volume(
     x=X.numpy().flatten(),
