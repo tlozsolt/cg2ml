@@ -6,7 +6,8 @@ import pandas as pd
 import os, glob
 import math
 
-class hash():
+
+class Hash():
     """
     A python class to create a spatial hash used for chunking an xyzt image data
     into a searchable table of hash parameters.
@@ -34,6 +35,7 @@ class hash():
 
     -zsolt Jul 30, 2021
     """
+
     def __init__(self, metaDataPath):
 
         # load yaml metaData file
@@ -52,21 +54,25 @@ class hash():
         dim = set()
         overlap = set()
         for mat in ['sed', 'gel']:
-            for coord in ['x','y']:
+            for coord in ['x', 'y']:
                 dim.add(hash_param[mat]['dim'][coord])
                 overlap.add(hash_param[mat]['minOverlap'][coord])
 
         # are the sets of len 1? They should be
-        if len(dim) == 1: hashDim_xy = dim.pop()
-        else: raise ValueError("Hash dimensions in x and y must be equal for both sed and gel")
+        if len(dim) == 1:
+            hashDim_xy = dim.pop()
+        else:
+            raise ValueError("Hash dimensions in x and y must be equal for both sed and gel")
 
-        if len(overlap) == 1: hashOverlap_xy = overlap.pop()
-        else: raise ValueError("Hash overlap in x and y must be equal for both sed and gel")
+        if len(overlap) == 1:
+            hashOverlap_xy = overlap.pop()
+        else:
+            raise ValueError("Hash overlap in x and y must be equal for both sed and gel")
 
         # compute the number of hashes in x and y
         # [ ] check that this works, july 30 2021
-        Nx = math.ceil((xDim-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
-        Ny = math.ceil((yDim-hashOverlap_xy)/(hashDim_xy - hashOverlap_xy))
+        Nx = math.ceil((xDim - hashOverlap_xy) / (hashDim_xy - hashOverlap_xy))
+        Ny = math.ceil((yDim - hashOverlap_xy) / (hashDim_xy - hashOverlap_xy))
 
         # now deal with the z coordinate
         # z chunks are computed separately for gel and sediment and based on min overlap and z dimension in gel and sed portions
@@ -83,43 +89,45 @@ class hash():
         hashDim_z_sed = hash_param['sed']['dim']['z']
 
         # compute the number of chunks
-        Nz_sed: Union[float, int] = math.ceil((sedZ_dim[1] - sedZ_dim[0] - sed_overlap_gel )/(hashDim_z_sed - sed_overlap_gel))
-        Nz_gel = math.ceil((gelZ_dim[1] - gelZ_dim[0] - gel_overlap_sed )/(hashDim_z_gel - gel_overlap_sed))
+        Nz_sed: Union[float, int] = math.ceil(
+            (sedZ_dim[1] - sedZ_dim[0] - sed_overlap_gel) / (hashDim_z_sed - sed_overlap_gel))
+        Nz_gel = math.ceil((gelZ_dim[1] - gelZ_dim[0] - gel_overlap_sed) / (hashDim_z_gel - gel_overlap_sed))
 
         # create an empty dictionary with keys spanning the hash size
         N = timeSteps * (Nz_sed + Nz_gel) * Nx * Ny
         self.metaData['hashDimension'] = {'N': N,
-                                          't':timeSteps,
+                                          't': timeSteps,
                                           'Nz_sed': Nz_sed,
                                           'Nz_gel': Nz_gel,
                                           'Nx': Nx,
                                           'Ny': Ny}
+
         # Generate, for each hashValue, the xyz cutoffs...permutations on 3 choices, each, on x and y
         # to generate x points, we start at left (ie 0), \
         # add the cropped dimension until we exceed the full dimension, \
         # and then shift the rightmost point to end at rightmost extent. Same for y
         def hashCenters(blockSize, left, right, N):
             """Returns a list of N evenly spaced points separated by """
-            if blockSize*N < (right-left): raise KeyError("hash dimension is too small")
-            return np.linspace(np.floor(left + blockSize/2), np.ceil(right - blockSize/2),num=N)
+            if blockSize * N < (right - left): raise KeyError("hash dimension is too small")
+            return np.linspace(np.floor(left + blockSize / 2), np.ceil(right - blockSize / 2), num=N)
 
-        centerPts = {'x': hashCenters(hashDim_xy,0,xDim,Nx),
-                     'y': hashCenters(hashDim_xy,0,yDim,Ny),
+        centerPts = {'x': hashCenters(hashDim_xy, 0, xDim, Nx),
+                     'y': hashCenters(hashDim_xy, 0, yDim, Ny),
                      'z_sed': hashCenters(hashDim_z_sed, sedZ_dim[0], sedZ_dim[1], Nz_sed),
                      'z_gel': hashCenters(hashDim_z_gel, gelZ_dim[0], gelZ_dim[1], Nz_gel)}
 
-        xCrop = [(int(c-hashDim_xy/2),int(c + hashDim_xy/2)) for c in centerPts['x']]
+        xCrop = [(int(c - hashDim_xy / 2), int(c + hashDim_xy / 2)) for c in centerPts['x']]
 
         zCrop = []  # list of all the z-positions for gel and sediment
         material = []  # list of str specifiying whether material is sed or gel
 
         for c in centerPts['z_gel']:
-            zCrop.append((int(c - hashDim_z_gel/2),
-                          int(c + hashDim_z_gel/2)))
+            zCrop.append((int(c - hashDim_z_gel / 2),
+                          int(c + hashDim_z_gel / 2)))
             material.append('gel')
         for c in centerPts['z_sed']:
-            zCrop.append((int(c - hashDim_z_sed/2), \
-                          int(c + hashDim_z_sed/2)))
+            zCrop.append((int(c - hashDim_z_sed / 2), \
+                          int(c + hashDim_z_sed / 2)))
             material.append('sed')
 
         hashTable = {}
@@ -211,11 +219,11 @@ class hash():
            return inner(df_entry[0],df_entry[1],df_entry[2])
         """
         # read yaml to get the keys
-        #n_steps = len(self.metaData['pipeline'])
-        #step_list = [self.metaData['pipeline'][n].keys for n in range(n_steps)]
+        # n_steps = len(self.metaData['pipeline'])
+        # step_list = [self.metaData['pipeline'][n].keys for n in range(n_steps)]
         # find the step number coresponding to input step
         for index, val in enumerate(metaData['pipeline']):
-        #for index, val in enumerate(step_list):
+            # for index, val in enumerate(step_list):
             if step == val:
                 step_dict = metaData['pipeline'][index]
                 break
@@ -229,7 +237,25 @@ class hash():
             # to getfPath
             input = step_dict['stem'][flag].format(**directories) + step_dict['fName'][flag].format(**dict(hv_entry))
             return input
+
         return _exampleFunc
+
+    @staticmethod
+    def hash2Path(hv: int, step: str, frmt: dict, globalPath: str, **kwargs):
+        return os.path.join(globalPath, frmt[step].format(hv))
+
+    @property
+    def getDeconPath(self):
+        # I want this to return a function that can be applied applied across the rows of a hash_df
+        # and return a dataFrame of strings of filePaths for all option in metaData pipeline step decon
+        # ie in, out, psf, and exec for each hashValue.
+        meta = self.metaData['pipeline']
+        for key in ['in','out','psf','exec']: #this is hardcoded currently, should be fixed.
+
+
+        deconArgs = {'step': 'decon', 'globalPath': self.metaData['globalPath'], 'x': 'not used', 'frmt': frmt}
+        deconPath = functools.partial(hash2Path, **deconArgs)
+
     """
    def path_factory(step, flag):
       if step == 'decon': test_str ='{stem}/decon'
@@ -239,10 +265,13 @@ class hash():
       return getString
    >> tmp.apply(path_factory('decon','in'),axis=1) 
     """
+
+
 def test(metaPath='../metaData_template.yml'):
     return hash(metaPath)
 
+
 if __name__ == '__main__':
     inst = test('../metaData_template.yml')
-#%%
+    # %%
     inst = test('../metaData_template.yml')

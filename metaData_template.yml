@@ -1,4 +1,4 @@
-&global_fName 'tfr10292018_shearRun_f_{suffix}'
+&global_fName: 'tfr10292018_shearRun_f_{suffix}'
 directories:
   LOCAL: '/path/to/local/working/directory'
   PROJECT: '/path/to/dir/with/long/term/storage'
@@ -13,15 +13,15 @@ pipeline:
         out: '{SCRATCH}/hash'
       fName:
         in: '/tfrGel10212018A_shearRun10292018f20181030_22333 PM_'
-        out: '/hv{hv:03}_{mat}_hash.tif'
+        out: '/hv{hv:03}_m{mat}_hash.tif'
   - denoise:
       stem:
         in: '{SCRATCH}/hash'
         out: '{SCRATCH}/denoise'
         calibration: '{CALIBRATION}/denoise/camera_sn0000' # directory containing offset  and gain pixel maps
       fName:
-        in: '/hv{hv:03}_{mat}_hash.tif'
-        out: '/hv{hv:03}_{mat}_denoise.tif'
+        in: '/hv{hv:03}_m{mat}_hash.tif'
+        out: '/hv{hv:03}_m{mat}_denoise.tif'
   - deconvolve:
       stem:
         in: '{SCRATCH}/denoise'
@@ -29,8 +29,8 @@ pipeline:
         psf: '{CALIBRATION}/decon/psf'
         exec: '/path/to/deconLab2'
       fName:
-        in: '/hv{hv:03}_mat_denoise.tif'
-        out: '/hv{hv:03}_mat_decon.tif'
+        in: '/hv{hv:03}_m{mat}_denoise.tif'
+        out: '/hv{hv:03}_m{mat}_decon.tif'
         psf: '/regexp_for_psf_slices.tif'
         exec: '/probably_something_like_deconLab2.jar'
   - segment:
