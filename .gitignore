@@ -1,4 +1,4 @@
 /.vscode
 /results
 /saved_chunk_xarray.nc
-/finalim.h5
+finalim.h5
