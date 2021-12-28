@@ -70,9 +70,7 @@ def get_chunk_img(n1,index,chunkorigin,centerloc):
 
            size=np.shape(output)
        if size[1] != chunksize:
-
            # print(np.shape([np.zeros((chunksize,chunksize))]))
-
            output=np.concatenate((output, np.transpose([np.zeros((chunksize,chunksize))],(1,0,2))),axis=1)
            size=np.shape(output)
        #print(size)
