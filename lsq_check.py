@@ -15,11 +15,13 @@ def read_volume_from_hdf5(volume_data_path):
 full_volume = read_volume_from_hdf5('finalim.h5') # z, y, x load images
 # %%
 import pandas as pd
-csv = pd.read_csv('ilastik_predictions_locRefine_111621.csv', delimiter = ',') #load centroid data
-
+#csv = pd.read_csv('ilastik_predictions_locRefine_111621.csv', delimiter = ',') #load centroid data
+csv = pd.read_csv('ilastik_centroids_BB_v1_100821.csv', delimiter = ',')
 csv.head() #remove header
 
 # %%
+print(list(range(2)))
+#%%
 def subset_coord_columns(dataframe, n):
     return dataframe.iloc[:, n:n+3]
 

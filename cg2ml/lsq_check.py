@@ -12,6 +12,7 @@ def read_volume_from_hdf5(volume_data_path):
 
 full_volume = read_volume_from_hdf5('../finalim.h5') # z, y, x
 # %%
+#%%
 import pandas as pd
 csv = pd.read_csv('../../Data/locations/tfrGel10212018A_shearRun10292018f_locations_hv01342_sed_trackPy.csv', delimiter = ' ')
 csv.head()
