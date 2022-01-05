@@ -23,12 +23,13 @@ class AbstractSegmentationResult(Sequence): # Inherit from Sequence to enforce t
 @dataclass(frozen = True)
 class CSVSegmentationResult(AbstractSegmentationResult):
     filepath: Union[str, Path]
-    _data: pd.DataFrame = field(init = False) # So that instance constructions require only filepath
+    _data: pd.DataFrame = field(init = False, repr = False) # So that instance constructions require only filepath
 
     def __post_init__(self):
-        self._data = self._read_delimited_file()
+        data = self._read_delimited_file()
+        object.__setattr__(self, '_data', data)
 
-    # Implement __eq__ to make this and all child classes hashable
+    # Implement __eq__ to make all frozen child classes hashable
     # Two CSV segmentation results are equal if they both reference the same file
     def __eq__(self, other) -> bool:
         if isinstance(other, CSVSegmentationResult):
@@ -46,11 +47,11 @@ class CSVSegmentationResult(AbstractSegmentationResult):
         return len(self._data)
 
     # Implement couple useful pandas functions for improved ergonomics
-    def head(self) -> None:
-        self._data.head()
+    def head(self) -> pd.DataFrame:
+        return self._data.head()
 
-    def tail(self) -> None:
-        self._data.tail()
+    def tail(self) -> pd.DataFrame:
+        return self._data.tail()
 
 
 @dataclass(frozen = True)
@@ -58,23 +59,23 @@ class IlastikSegmentationResult(CSVSegmentationResult):
 
     # Concrete implementation for the csv file read.
     def _read_delimited_file(self):
-        return pd.read_csv(self._data, delimiter = ',')
+        return pd.read_csv(self.filepath, delimiter = ',')
 
     # Concrete implementation of the centroids property
     @property
     def centroids(self) -> np.array:
-        return self._data.loc[:, [f'Center of the object_{i}' for i in range(3)]] # xyz order
+        return self._data.loc[:, [f'Center of the object_{i}' for i in range(3)]].to_numpy() # xyz order
 
 
 @dataclass(frozen = True)
 class TrackPySegmentationResult(CSVSegmentationResult):
-    
+
     # Concrete implementation for the csv file read. Note the subtle difference in the delimiter (different between Ilastik and TrackPy)
     def _read_delimited_file(self):
-        return pd.read_csv(self._data, delimiter = ' ')
+        return pd.read_csv(self.filepath, delimiter = ' ')
 
     # Concrete implementation of the centroids property
     @property
     def centroids(self) -> np.array:
-        return self._data.loc[:, 3:-1:0] # xyz order
+        return self._data.iloc[:, 3:0:-1].to_numpy() # xyz order
   

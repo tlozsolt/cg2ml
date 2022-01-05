@@ -4,23 +4,30 @@
 #%%
 import numpy as np
 import h5py
-import xarray as xr
+#import xarray as xr
 import plotly.graph_objects as go
 
+from cg2ml.segmentation import IlastikSegmentationResult, TrackPySegmentationResult
 def read_volume_from_hdf5(volume_data_path):
     hdf_file = h5py.File(volume_data_path)
     volume_data = hdf_file['image_dataset']
     return volume_data
 
-full_volume = read_volume_from_hdf5('finalim.h5') # z, y, x load images
+full_volume = read_volume_from_hdf5('../Data/finalim.h5') # z, y, x load images
 # %%
 import pandas as pd
 #csv = pd.read_csv('ilastik_predictions_locRefine_111621.csv', delimiter = ',') #load centroid data
-csv = pd.read_csv('ilastik_centroids_BB_v1_100821.csv', delimiter = ',')
+csv = pd.read_csv('../Data/ilastik_centroids_BB_v1_100821.csv', delimiter = ',')
 csv.head() #remove header
 
 # %%
-print(list(range(2)))
+seg_results = IlastikSegmentationResult('../Data/ilastik_centroids_BB_v1_100821.csv')
+#%%
+seg_results.centroids
+#%%
+seg_res2 = TrackPySegmentationResult('../Data/tfrGel10212018A_shearRun10292018f_locations_hv01342_sed_trackPy.csv')
+#%%
+
 #%%
 def subset_coord_columns(dataframe, n):
     return dataframe.iloc[:, n:n+3]
